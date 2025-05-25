@@ -146,15 +146,61 @@ The NixOS module provides the following options:
 | `environmentFile` | Environment file containing sensitive configuration | `null` |
 | `serverMode` | Whether to run OpenHands in server mode (with web UI) | `true` |
 
+## Implementation Details
+
+The OpenHands Nix integration is structured as follows:
+
+### Package Structure
+
+The package implementation is modularized into separate files:
+
+- `nix/package.nix`: Defines the OpenHands package
+- `nix/devShell.nix`: Defines the development environment
+- `nix/nixosModule.nix`: Defines the NixOS module
+
+This modular approach makes it easier to maintain and extend the Nix integration.
+
+### Server Mode vs CLI Mode
+
+The NixOS module supports running OpenHands in two modes:
+
+1. **Server Mode** (default): Runs OpenHands with a web UI
+2. **CLI Mode**: Runs OpenHands in command-line mode
+
+You can control this with the `serverMode` option:
+
+```nix
+services.openhands = {
+  enable = true;
+  serverMode = true;  # Set to false for CLI mode
+};
+```
+
+### Python Environment
+
+The package includes a Python environment with all required dependencies. This environment is created using `python.withPackages` to ensure all dependencies are available.
+
+### Frontend Build
+
+The frontend is built during the package build process using Node.js and npm. The build artifacts are then included in the final package.
+
 ## Troubleshooting
 
 ### Frontend Build Issues
 
-If you encounter issues with the frontend build, you may need to update the `npmDepsHash` in the flake.nix file. After the first build attempt fails, Nix will provide the correct hash to use.
+If you encounter issues with the frontend build, check the following:
+
+1. Make sure Node.js and npm are available
+2. Check for any errors in the build logs
+3. Try building the frontend manually to identify any issues
 
 ### Python Dependencies
 
-If certain Python packages fail to build, you may need to add specific overrides in the `poetryOverrides` section of the flake.nix file.
+If certain Python packages fail to build, you may need to add specific overrides in the `nix/package.nix` file. Common issues include:
+
+1. Missing build dependencies
+2. Incompatible package versions
+3. Platform-specific issues
 
 ### Service Startup Issues
 
@@ -163,5 +209,11 @@ Check the service logs with:
 ```bash
 journalctl -u openhands.service -f
 ```
+
+Common issues include:
+
+1. Missing or incorrect permissions on data directories
+2. Environment file issues
+3. Network configuration problems
 
 Make sure the service has the correct permissions to access the data directory and workspace.

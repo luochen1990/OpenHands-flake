@@ -4,8 +4,9 @@
 
 ## 先决条件
 
-- 安装了 Nix 并启用了 flakes 功能
+- 安装了 Nix 并启用了 flakes 功能（在 `~/.config/nix/nix.conf` 中添加 `experimental-features = nix-command flakes`）
 - Git
+- 如果你想测试 NixOS 模块，需要一个 NixOS 系统
 
 ## 测试步骤
 
@@ -196,3 +197,94 @@ diff -r result1 result2
 ```
 
 如果构建是可复现的，diff 命令应该不会显示任何差异。
+
+## 最新更改测试
+
+最新的更改包括对前端和后端构建过程的重大改进。以下是测试这些更改的步骤：
+
+### 测试前端构建改进
+
+前端构建现在使用 `pkgs.buildNpmPackage` 而不是手动 npm 命令，这提供了更好的可复现性和错误处理：
+
+```bash
+# 构建前端包
+nix build .#openhands-frontend
+
+# 检查前端构建结果
+ls -la result/
+```
+
+预期结果：前端构建成功，`result` 目录包含前端资源文件，包括 index.html 和相关的 JavaScript 文件。
+
+### 测试 Python 包改进
+
+Python 包构建现在使用更简单的方法，避免了依赖问题：
+
+```bash
+# 构建完整包
+nix build .#openhands
+
+# 检查 Python 包
+ls -la result/lib/openhands/
+```
+
+预期结果：Python 包构建成功，`result/lib/openhands/` 目录包含 OpenHands Python 模块。
+
+### 测试可执行文件
+
+```bash
+# 检查可执行文件
+ls -la result/bin/
+
+# 测试 CLI 模式
+./result/bin/openhands --help
+
+# 测试服务器模式
+./result/bin/openhands-server --help
+```
+
+预期结果：可执行文件存在并能正确运行，显示帮助信息。
+
+### 测试 NixOS 模块改进
+
+NixOS 模块现在支持 CLI 和服务器模式，并改进了环境文件处理：
+
+```nix
+# 在你的 configuration.nix 中添加
+{
+  imports = [
+    # 导入 OpenHands flake
+    (builtins.getFlake "github:luochen1990/OpenHands-flake").nixosModules.default
+  ];
+
+  # 配置 OpenHands 服务（服务器模式）
+  services.openhands = {
+    enable = true;
+    serverMode = true;
+    port = 8000;
+    host = "0.0.0.0";
+    environmentFile = "/path/to/your/env/file";
+  };
+}
+```
+
+或者使用 CLI 模式：
+
+```nix
+# 在你的 configuration.nix 中添加
+{
+  imports = [
+    # 导入 OpenHands flake
+    (builtins.getFlake "github:luochen1990/OpenHands-flake").nixosModules.default
+  ];
+
+  # 配置 OpenHands 服务（CLI 模式）
+  services.openhands = {
+    enable = true;
+    serverMode = false;
+    environmentFile = "/path/to/your/env/file";
+  };
+}
+```
+
+预期结果：OpenHands 服务成功启动，可以通过 http://localhost:8000 访问（服务器模式）或在终端中使用（CLI 模式）。

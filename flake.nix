@@ -3,154 +3,186 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     poetry2nix = {
       url = "github:nix-community/poetry2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, poetry2nix, ... }:
-    flake-utils.lib.eachSystem ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"] (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ poetry2nix.overlays.default ];
-        };
-
-        # Python version used by the project
-        python = pkgs.python312;
-
-        # Override packages that might have issues with poetry2nix
-        poetryOverrides = pkgs.poetry2nix.overrides.withDefaults (final: prev: {
-          # Add overrides for problematic packages here if needed
-          browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
-            buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-          });
-          
-          e2b = prev.e2b.overridePythonAttrs (old: {
-            buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-          });
-          
-          # Add more overrides as needed
-        });
-
-        # Create a Python environment with all dependencies
-        poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
-          projectDir = self;
-          python = python;
-          overrides = poetryOverrides;
-          editablePackageSources = {
-            openhands-ai = self;
+  outputs = { self, nixpkgs, poetry2nix, ... }:
+    let
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
+    in {
+      packages = forAllSystems (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ poetry2nix.overlays.default ];
           };
-        };
 
-        # Build the frontend
-        frontendBuild = pkgs.buildNpmPackage {
-          pname = "openhands-frontend";
-          version = "0.39.1";
-          src = "${self}/frontend";
-          
-          npmDepsHash = pkgs.lib.fakeHash;  # Replace with actual hash after first build attempt
-          
-          buildInputs = with pkgs; [
-            nodejs_20
-          ];
-          
-          buildPhase = ''
-            export HOME=$(mktemp -d)
-            npm run build
-          '';
-          
-          installPhase = ''
-            mkdir -p $out
-            cp -r build/* $out/
-          '';
-        };
+          # Python version used by the project
+          python = pkgs.python312;
 
-        # The main package
-        openhandsPackage = pkgs.poetry2nix.mkPoetryApplication {
-          projectDir = self;
-          python = python;
-          overrides = poetryOverrides;
-          
-          # Propagate build inputs to the application
-          propagatedBuildInputs = with pkgs; [
-            # System dependencies
-            tmux
-            nodejs_20
+          # Override packages that might have issues with poetry2nix
+          poetryOverrides = pkgs.poetry2nix.overrides.withDefaults (final: prev: {
+            # Add overrides for problematic packages here if needed
+            browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+            });
             
-            # For browser functionality
-            chromium
+            e2b = prev.e2b.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+            });
             
-            # For terminal functionality
-            bash
-            coreutils
-            findutils
-            gnugrep
-            gnused
-          ];
-          
-          postInstall = ''
-            # Create the frontend directory
-            mkdir -p $out/lib/python3.12/site-packages/frontend/build
-            
-            # Copy the frontend build
-            cp -r ${frontendBuild}/* $out/lib/python3.12/site-packages/frontend/build/
-            
-            # Create a wrapper script
-            mkdir -p $out/bin
-            cat > $out/bin/openhands-server << EOF
-            #!/bin/sh
-            export SERVE_FRONTEND=true
-            exec $out/bin/openhands server "\$@"
-            EOF
-            chmod +x $out/bin/openhands-server
-          '';
-        };
+            # Add more overrides as needed
+          });
 
-      in {
-        packages = {
+          # Create a Python environment with all dependencies
+          poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
+            projectDir = self;
+            python = python;
+            overrides = poetryOverrides;
+            editablePackageSources = {
+              openhands-ai = self;
+            };
+          };
+
+          # Build the frontend
+          frontendBuild = pkgs.buildNpmPackage {
+            pname = "openhands-frontend";
+            version = "0.39.1";
+            src = "${self}/frontend";
+            
+            npmDepsHash = pkgs.lib.fakeHash;  # Replace with actual hash after first build attempt
+            
+            buildInputs = with pkgs; [
+              nodejs_20
+            ];
+            
+            buildPhase = ''
+              export HOME=$(mktemp -d)
+              npm run build
+            '';
+            
+            installPhase = ''
+              mkdir -p $out
+              cp -r build/* $out/
+            '';
+          };
+
+          # The main package
+          openhandsPackage = pkgs.poetry2nix.mkPoetryApplication {
+            projectDir = self;
+            python = python;
+            overrides = poetryOverrides;
+            
+            # Propagate build inputs to the application
+            propagatedBuildInputs = with pkgs; [
+              # System dependencies
+              tmux
+              nodejs_20
+              
+              # For browser functionality
+              chromium
+              
+              # For terminal functionality
+              bash
+              coreutils
+              findutils
+              gnugrep
+              gnused
+            ];
+            
+            postInstall = ''
+              # Create the frontend directory
+              mkdir -p $out/lib/python3.12/site-packages/frontend/build
+              
+              # Copy the frontend build
+              cp -r ${frontendBuild}/* $out/lib/python3.12/site-packages/frontend/build/
+              
+              # Create a wrapper script
+              mkdir -p $out/bin
+              cat > $out/bin/openhands-server << EOF
+              #!/bin/sh
+              export SERVE_FRONTEND=true
+              exec $out/bin/openhands server "\$@"
+              EOF
+              chmod +x $out/bin/openhands-server
+            '';
+          };
+        in {
           default = openhandsPackage;
           openhands = openhandsPackage;
         };
-
-        # Development shell with all dependencies
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            # Python environment with all dependencies
-            poetryEnv
-            poetry
-            
-            # Node.js and npm for frontend development
-            nodejs_20
-            nodePackages.npm
-            
-            # Development tools
-            pre-commit
-            
-            # System dependencies
-            tmux
-            
-            # For browser functionality
-            chromium
-            
-            # For terminal functionality
-            bash
-            coreutils
-            findutils
-            gnugrep
-            gnused
-          ];
+      
+      devShells = forAllSystems (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ poetry2nix.overlays.default ];
+          };
           
-          shellHook = ''
-            echo "OpenHands development environment"
-            echo "Run 'make build' to build the project"
-            echo "Run 'make run' to start the application"
-          '';
-        };
-      }
-    ) // {
+          # Python version used by the project
+          python = pkgs.python312;
+          
+          # Override packages that might have issues with poetry2nix
+          poetryOverrides = pkgs.poetry2nix.overrides.withDefaults (final: prev: {
+            # Add overrides for problematic packages here if needed
+            browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+            });
+            
+            e2b = prev.e2b.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+            });
+          });
+          
+          # Create a Python environment with all dependencies
+          poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
+            projectDir = self;
+            python = python;
+            overrides = poetryOverrides;
+            editablePackageSources = {
+              openhands-ai = self;
+            };
+          };
+        in {
+          default = pkgs.mkShell {
+            buildInputs = with pkgs; [
+              # Python environment with all dependencies
+              poetryEnv
+              poetry
+              
+              # Node.js and npm for frontend development
+              nodejs_20
+              nodePackages.npm
+              
+              # Development tools
+              pre-commit
+              
+              # System dependencies
+              tmux
+              
+              # For browser functionality
+              chromium
+              
+              # For terminal functionality
+              bash
+              coreutils
+              findutils
+              gnugrep
+              gnused
+            ];
+            
+            shellHook = ''
+              echo "OpenHands development environment"
+              echo "Run 'make build' to build the project"
+              echo "Run 'make run' to start the application"
+            '';
+          };
+        }
+      );
       # NixOS module for the OpenHands service
       nixosModules.default = { config, lib, pkgs, ... }:
         let

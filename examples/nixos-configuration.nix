@@ -30,6 +30,10 @@ in {
     
     # Customize the workspace directory if needed
     workspaceDir = "/var/lib/openhands/workspace";
+    
+    # Run in server mode (with web UI)
+    # Set to false to run in CLI mode
+    serverMode = true;
   };
 
   # Optional: Open the firewall port

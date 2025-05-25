@@ -148,9 +148,10 @@
                 ExecStart = "${cfg.package}/bin/hello";  # Placeholder for actual command
                 WorkingDirectory = cfg.dataDir;
                 StateDirectory = lib.removePrefix "/var/lib/" cfg.dataDir;
-                EnvironmentFile = lib.mkIf (cfg.environmentFile != null) cfg.environmentFile;
                 Restart = "on-failure";
                 RestartSec = "5s";
+              } // lib.optionalAttrs (cfg.environmentFile != null) {
+                EnvironmentFile = cfg.environmentFile;
               };
               
               environment = {

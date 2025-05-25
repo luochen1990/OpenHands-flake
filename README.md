@@ -82,27 +82,6 @@ works best, but you have [many options](https://docs.all-hands.dev/modules/usage
 
 ### Nix and NixOS
 
-OpenHands can be installed and run using Nix:
-
-```bash
-# Install as a package
-nix profile install github:luochen1990/OpenHands-flake
-
-# Or enter a development shell
-nix develop github:luochen1990/OpenHands-flake
-```
-
-For NixOS users, a module is available to run OpenHands as a service. See [NIX.md](NIX.md) for detailed instructions.
-
-### Other Options
-
-You can also [connect OpenHands to your local filesystem](https://docs.all-hands.dev/modules/usage/runtimes/docker#connecting-to-your-filesystem),
-run OpenHands in a scriptable [headless mode](https://docs.all-hands.dev/modules/usage/how-to/headless-mode),
-interact with it via a [friendly CLI](https://docs.all-hands.dev/modules/usage/how-to/cli-mode),
-or run it on tagged issues with [a github action](https://docs.all-hands.dev/modules/usage/how-to/github-action).
-
-### Nix Integration
-
 If you're using Nix or NixOS, you can install and run OpenHands using the provided flake:
 
 ```bash
@@ -111,6 +90,9 @@ nix profile install github:luochen1990/OpenHands-flake
 
 # Run OpenHands
 openhands
+
+# Or enter a development shell
+nix develop github:luochen1990/OpenHands-flake
 ```
 
 For NixOS users, you can add OpenHands as a service:
@@ -125,11 +107,19 @@ For NixOS users, you can add OpenHands as a service:
     enable = true;
     host = "0.0.0.0";
     port = 3000;
+    serverMode = true;  # Set to false for CLI mode
   };
 }
 ```
 
 See [NIX.md](NIX.md) for more details on the Nix integration.
+
+### Other Options
+
+You can also [connect OpenHands to your local filesystem](https://docs.all-hands.dev/modules/usage/runtimes/docker#connecting-to-your-filesystem),
+run OpenHands in a scriptable [headless mode](https://docs.all-hands.dev/modules/usage/how-to/headless-mode),
+interact with it via a [friendly CLI](https://docs.all-hands.dev/modules/usage/how-to/cli-mode),
+or run it on tagged issues with [a github action](https://docs.all-hands.dev/modules/usage/how-to/github-action).
 
 Visit [Running OpenHands](https://docs.all-hands.dev/modules/usage/installation) for more information and setup instructions.
 

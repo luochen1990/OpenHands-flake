@@ -27,6 +27,16 @@
             inherit pkgs;
             src = self;
           };
+          
+      # Import the OpenHands frontend package definition
+      openhands-frontend = system:
+        let
+          pkgs = nixpkgsFor system;
+        in
+          import ./nix/frontend.nix {
+            inherit pkgs;
+            src = self;
+          };
     in {
       # Packages
       packages = forAllSystems (system:
@@ -35,6 +45,7 @@
         in {
           default = openhandsPackage system;
           openhands = openhandsPackage system;
+          openhands-frontend = openhands-frontend system;
         }
       );
       

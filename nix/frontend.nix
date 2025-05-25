@@ -1,0 +1,42 @@
+{ pkgs, src }:
+
+pkgs.buildNpmPackage {
+  pname = "openhands-frontend";
+  version = "0.39.1";
+  
+  # 使用完整仓库作为源，但只构建前端部分
+  inherit src;
+  
+  # 指定前端目录
+  sourceRoot = "${src.name}/frontend";
+  
+  # 使用 package-lock.json 确保依赖的确定性
+  npmDepsHash = "sha256-uaxHdLMsYWvXbZvXdm+vXrYa+vfX5DYoO2izIuOLjzM=";
+  
+  # 构建命令
+  buildPhase = ''
+    export HOME=$TMPDIR
+    export CI=true
+    export NODE_OPTIONS="--max-old-space-size=4096"
+    
+    npm run build
+  '';
+  
+  # 安装命令
+  installPhase = ''
+    mkdir -p $out
+    cp -r build/* $out/
+  '';
+  
+  # 使用 npm ci 而不是 npm install
+  npmFlags = ["--legacy-peer-deps"];
+  
+  # 元数据
+  meta = with pkgs.lib; {
+    description = "Frontend for OpenHands AI software engineer";
+    homepage = "https://github.com/all-hands-dev/OpenHands";
+    license = licenses.mit;
+    platforms = platforms.all;
+    maintainers = [];
+  };
+}

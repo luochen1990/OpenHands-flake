@@ -58,11 +58,10 @@ let
     pyyaml
   ]);
   
-  # Frontend build dependencies
-  nodeDeps = with pkgs; [
-    nodejs_20
-    nodePackages.npm
-  ];
+  # Build frontend using proper Nix JavaScript packaging
+  frontend = import ./frontend.nix {
+    inherit pkgs src;
+  };
   
   # Runtime dependencies
   runtimeDeps = with pkgs; [
@@ -75,39 +74,14 @@ pkgs.stdenv.mkDerivation {
   version = "0.39.1";
   inherit src;
   
-  buildInputs = [ pythonEnv ] ++ nodeDeps ++ runtimeDeps;
+  buildInputs = [ pythonEnv ] ++ runtimeDeps;
   nativeBuildInputs = with pkgs; [ makeWrapper wrapGAppsHook ];
   
   # Disable some phases that are not needed
   dontConfigure = true;
   
-  # Build both backend and frontend
+  # Build backend only (frontend is built separately)
   buildPhase = ''
-    # Set HOME for npm and other environment variables
-    export HOME=$TMPDIR
-    export CI=true
-    export NODE_OPTIONS="--max-old-space-size=4096"
-    
-    echo "Building frontend..."
-    if [ -d frontend ]; then
-      cd frontend
-      
-      # Print npm and node versions for debugging
-      echo "Node version: $(node --version)"
-      echo "NPM version: $(npm --version)"
-      
-      # Try to build the frontend, but don't fail the build if it fails
-      echo "Installing npm dependencies..."
-      npm install --no-audit --no-fund --loglevel verbose || echo "Frontend dependency installation failed, continuing anyway"
-      
-      echo "Building frontend application..."
-      npm run build --verbose || echo "Frontend build failed, continuing anyway"
-      
-      cd ..
-    else
-      echo "Frontend directory not found, skipping frontend build"
-    fi
-    
     echo "Installing Python package..."
     # Use pip to install the package in development mode
     pip install -e .
@@ -124,30 +98,9 @@ pkgs.stdenv.mkDerivation {
     cp -r openhands $out/lib/openhands/
     cp pyproject.toml poetry.lock $out/lib/openhands/
     
-    # Copy the frontend build if it exists, otherwise create a minimal placeholder
-    if [ -d frontend/build ]; then
-      echo "Copying frontend build..."
-      cp -r frontend/build/* $out/share/openhands/frontend/
-    else
-      echo "Frontend build not found, creating minimal placeholder..."
-      cat > $out/share/openhands/frontend/index.html << EOF
-<!DOCTYPE html>
-<html>
-<head>
-  <title>OpenHands</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-    h1 { color: #333; }
-    p { color: #666; }
-  </style>
-</head>
-<body>
-  <h1>OpenHands</h1>
-  <p>Frontend not built. Please use the CLI interface or build the frontend manually.</p>
-</body>
-</html>
-EOF
-    fi
+    # Copy the frontend build from the separate derivation
+    echo "Copying frontend build..."
+    cp -r ${frontend}/* $out/share/openhands/frontend/
     
     # Create a wrapper script for CLI mode
     makeWrapper ${pythonEnv.interpreter} $out/bin/openhands \

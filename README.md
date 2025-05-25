@@ -101,6 +101,36 @@ run OpenHands in a scriptable [headless mode](https://docs.all-hands.dev/modules
 interact with it via a [friendly CLI](https://docs.all-hands.dev/modules/usage/how-to/cli-mode),
 or run it on tagged issues with [a github action](https://docs.all-hands.dev/modules/usage/how-to/github-action).
 
+### Nix Integration
+
+If you're using Nix or NixOS, you can install and run OpenHands using the provided flake:
+
+```bash
+# Install OpenHands
+nix profile install github:luochen1990/OpenHands-flake
+
+# Run OpenHands
+openhands
+```
+
+For NixOS users, you can add OpenHands as a service:
+
+```nix
+{
+  imports = [ 
+    (builtins.fetchTarball "https://github.com/luochen1990/OpenHands-flake/archive/main.tar.gz").nixosModules.default 
+  ];
+  
+  services.openhands = {
+    enable = true;
+    host = "0.0.0.0";
+    port = 3000;
+  };
+}
+```
+
+See [NIX.md](NIX.md) for more details on the Nix integration.
+
 Visit [Running OpenHands](https://docs.all-hands.dev/modules/usage/installation) for more information and setup instructions.
 
 If you want to modify the OpenHands source code, check out [Development.md](https://github.com/All-Hands-AI/OpenHands/blob/main/Development.md).

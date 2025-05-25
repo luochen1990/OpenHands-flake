@@ -64,7 +64,6 @@ let
     # Missing dependencies from error message (only include those available in nixpkgs)
     minio
     pathspec
-    poetry
     pyjwt
     python-socketio
     redis

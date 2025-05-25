@@ -174,7 +174,7 @@
             
             package = lib.mkOption {
               type = lib.types.package;
-              default = self.packages.${pkgs.system}.openhands;
+              default = self.packages.${pkgs.stdenv.hostPlatform.system or "x86_64-linux"}.openhands;
               description = "The OpenHands package to use.";
             };
             

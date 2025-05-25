@@ -8,4 +8,4 @@
   }
 ) {
   src = ./.;
-}).shellNix.default
+}).defaultNix.devShells.${builtins.currentSystem}.default

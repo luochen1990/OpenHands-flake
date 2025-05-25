@@ -1,63 +1,6 @@
 { lib, pkgs, system, src }:
 
 let
-  python = pkgs.python312;
-  
-  # Create a Python environment with all dependencies
-  pythonEnv = python.withPackages (ps: with ps; [
-    # Core dependencies
-    aiohttp
-    boto3
-    fastapi
-    jinja2
-    numpy
-    pexpect
-    pip
-    poetry-core
-    protobuf
-    pydantic
-    python-dotenv
-    python-multipart
-    tenacity
-    toml
-    types-toml
-    uvicorn
-    
-    # LLM dependencies
-    litellm
-    openai
-    anthropic
-    
-    # Browser dependencies
-    html2text
-    beautifulsoup4
-    
-    # Runtime dependencies
-    jupyterlab
-    notebook
-    ipython
-    
-    # Additional dependencies
-    termcolor
-    psutil
-    prompt-toolkit
-    rich
-    typer
-    
-    # Development dependencies
-    pytest
-    pytest-asyncio
-    mypy
-    ruff
-    
-    # Additional packages that might be needed
-    requests
-    websockets
-    httpx
-    typing-extensions
-    pyyaml
-  ]);
-  
   # Build frontend using proper Nix JavaScript packaging
   frontend = import ./frontend.nix {
     inherit pkgs src;
@@ -68,51 +11,102 @@ let
     tmux
     chromium
   ];
+  
+  # Create a Python package
+  pythonPackage = pkgs.python312Packages.buildPythonPackage {
+    pname = "openhands";
+    version = "0.39.1";
+    format = "pyproject";
+    inherit src;
+    
+    # Disable some phases that are not needed
+    doCheck = false;
+    
+    # Add build dependencies
+    nativeBuildInputs = with pkgs.python312Packages; [
+      poetry-core
+      pip
+    ];
+    
+    # Add runtime dependencies
+    propagatedBuildInputs = with pkgs.python312Packages; [
+      # Core dependencies
+      aiohttp
+      boto3
+      fastapi
+      jinja2
+      numpy
+      pexpect
+      protobuf
+      pydantic
+      python-dotenv
+      python-multipart
+      tenacity
+      toml
+      types-toml
+      uvicorn
+      
+      # LLM dependencies
+      litellm
+      openai
+      anthropic
+      
+      # Browser dependencies
+      html2text
+      beautifulsoup4
+      
+      # Runtime dependencies
+      jupyterlab
+      notebook
+      ipython
+      
+      # Additional dependencies
+      termcolor
+      psutil
+      prompt-toolkit
+      rich
+      typer
+      
+      # Additional packages that might be needed
+      requests
+      websockets
+      httpx
+      typing-extensions
+      pyyaml
+    ];
+  };
 in
 pkgs.stdenv.mkDerivation {
   pname = "openhands";
   version = "0.39.1";
   inherit src;
   
-  buildInputs = [ pythonEnv ] ++ runtimeDeps;
+  buildInputs = [ pythonPackage ] ++ runtimeDeps;
   nativeBuildInputs = with pkgs; [ makeWrapper wrapGAppsHook ];
   
   # Disable some phases that are not needed
+  dontUnpack = true;
   dontConfigure = true;
-  
-  # Build backend only (frontend is built separately)
-  buildPhase = ''
-    echo "Installing Python package..."
-    # Use pip to install the package in development mode
-    pip install -e .
-  '';
+  dontBuild = true;
   
   # Install the package
   installPhase = ''
     mkdir -p $out/bin
-    mkdir -p $out/lib/openhands
-    mkdir -p $out/share/openhands
     mkdir -p $out/share/openhands/frontend
-    
-    # Copy the Python package
-    cp -r openhands $out/lib/openhands/
-    cp pyproject.toml poetry.lock $out/lib/openhands/
     
     # Copy the frontend build from the separate derivation
     echo "Copying frontend build..."
     cp -r ${frontend}/* $out/share/openhands/frontend/
     
     # Create a wrapper script for CLI mode
-    makeWrapper ${pythonEnv.interpreter} $out/bin/openhands \
+    makeWrapper ${pythonPackage}/bin/python $out/bin/openhands \
       --add-flags "-m openhands.cli.main" \
-      --set PYTHONPATH "$out/lib/openhands:$PYTHONPATH" \
       --set OPENHANDS_FRONTEND_PATH "$out/share/openhands/frontend" \
       --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
     
     # Create a server wrapper script for web UI mode
-    makeWrapper ${pythonEnv.interpreter} $out/bin/openhands-server \
+    makeWrapper ${pythonPackage}/bin/python $out/bin/openhands-server \
       --add-flags "-m openhands.server.main" \
-      --set PYTHONPATH "$out/lib/openhands:$PYTHONPATH" \
       --set OPENHANDS_FRONTEND_PATH "$out/share/openhands/frontend" \
       --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
   '';

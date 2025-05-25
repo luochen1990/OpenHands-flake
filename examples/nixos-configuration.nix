@@ -24,6 +24,8 @@ in {
     llmModel = "gpt-4o";
     
     # For sensitive information like API keys, use an environment file
+    # 确保此文件存在，否则服务将无法启动
+    # 如果不需要环境文件，请删除此行或设置为 null
     environmentFile = "/var/lib/openhands/secrets.env";
     
     # Customize the workspace directory if needed

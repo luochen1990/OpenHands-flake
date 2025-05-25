@@ -104,6 +104,19 @@ For sensitive information like API keys, create an environment file:
 LLM_API_KEY=your-api-key-here
 ```
 
+**重要提示**：确保环境文件存在并且可以被 OpenHands 服务访问。如果您指定了 `environmentFile` 选项但文件不存在，服务将无法启动。
+
+如果您不需要使用环境文件，请不要设置 `environmentFile` 选项，或将其设置为 `null`：
+
+```nix
+services.openhands = {
+  enable = true;
+  # 不要设置 environmentFile 选项
+  # 或者明确设置为 null
+  environmentFile = null;
+};
+```
+
 ### Configuration Options
 
 The NixOS module provides the following options:

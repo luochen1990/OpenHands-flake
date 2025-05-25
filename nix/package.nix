@@ -61,9 +61,8 @@ let
     typing-extensions
     pyyaml
     
-    # Missing dependencies from error message
+    # Missing dependencies from error message (only include those available in nixpkgs)
     minio
-    modal
     pathspec
     poetry
     pyjwt

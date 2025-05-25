@@ -144,6 +144,7 @@ The NixOS module provides the following options:
 | `llmModel` | LLM model to use | `"gpt-4o"` |
 | `llmBaseUrl` | Base URL for the LLM service (for local LLMs) | `""` |
 | `environmentFile` | Environment file containing sensitive configuration | `null` |
+| `serverMode` | Whether to run OpenHands in server mode (with web UI) | `true` |
 
 ## Troubleshooting
 

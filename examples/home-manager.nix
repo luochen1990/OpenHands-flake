@@ -20,7 +20,9 @@ in {
     };
     
     Service = {
+      # Use openhands-server for web UI mode, or openhands for CLI mode
       ExecStart = "${openhands.packages.${pkgs.system}.openhands}/bin/openhands-server";
+      # ExecStart = "${openhands.packages.${pkgs.system}.openhands}/bin/openhands"; # CLI mode
       WorkingDirectory = "${config.home.homeDirectory}/.openhands";
       Environment = [
         "BACKEND_HOST=127.0.0.1"

@@ -43,6 +43,9 @@
             ];
             
             shellHook = ''
+              export PYTHONPATH=$PWD:$PYTHONPATH
+              export OPENHANDS_FRONTEND_PATH=$PWD/frontend/build
+              
               echo "OpenHands development environment"
               echo "Run 'make build' to build the project"
               echo "Run 'make run' to start the application"
@@ -55,14 +58,16 @@
       nixosModules.default = { config, lib, pkgs, ... }:
         let
           cfg = config.services.openhands;
+          system = pkgs.stdenv.hostPlatform.system or pkgs.system or "x86_64-linux";
+          openhandsPkg = if cfg.package != null then cfg.package else self.packages.${system}.openhands;
         in {
           options.services.openhands = {
             enable = lib.mkEnableOption "OpenHands AI software engineer";
             
             package = lib.mkOption {
               type = lib.types.package;
-              default = pkgs.hello;  # Placeholder for actual package
-              description = "The OpenHands package to use.";
+              default = null;
+              description = "The OpenHands package to use. If null, uses the package from this flake.";
             };
             
             user = lib.mkOption {
@@ -123,6 +128,12 @@
               type = lib.types.nullOr lib.types.path;
               default = null;
               description = "Environment file containing sensitive configuration.";
+            };
+            
+            serverMode = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+              description = "Whether to run OpenHands in server mode (with web UI).";
             };
           };
           
@@ -193,7 +204,7 @@
               serviceConfig = {
                 User = cfg.user;
                 Group = cfg.group;
-                ExecStart = "${cfg.package}/bin/hello";  # Placeholder for actual command
+                ExecStart = "${openhandsPkg}/bin/hello";  # Placeholder for actual command
                 WorkingDirectory = cfg.dataDir;
                 StateDirectory = lib.removePrefix "/var/lib/" cfg.dataDir;
                 Restart = "on-failure";

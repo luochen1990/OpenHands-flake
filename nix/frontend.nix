@@ -8,7 +8,7 @@ pkgs.buildNpmPackage {
   inherit src;
   
   # 指定前端目录
-  sourceRoot = "${src.name}/frontend";
+  sourceRoot = "frontend";
   
   # 使用 package-lock.json 确保依赖的确定性
   npmDepsHash = "sha256-uaxHdLMsYWvXbZvXdm+vXrYa+vfX5DYoO2izIuOLjzM=";

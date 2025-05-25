@@ -43,7 +43,6 @@ let
     pytest-asyncio
     mypy
     ruff
-    pre-commit
   ]);
 in
 pkgs.mkShell {
@@ -53,6 +52,7 @@ pkgs.mkShell {
     pkgs.nodePackages.npm
     pkgs.tmux
     pkgs.chromium
+    pkgs.pre-commit
   ];
   
   shellHook = ''

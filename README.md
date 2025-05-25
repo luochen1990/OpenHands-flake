@@ -80,6 +80,22 @@ works best, but you have [many options](https://docs.all-hands.dev/modules/usage
 > [get in touch with us](https://docs.google.com/forms/d/e/1FAIpQLSet3VbGaz8z32gW9Wm-Grl4jpt5WgMXPgJ4EDPVmCETCBpJtQ/viewform)
 > for advanced deployment options.
 
+### Nix and NixOS
+
+OpenHands can be installed and run using Nix:
+
+```bash
+# Install as a package
+nix profile install github:luochen1990/OpenHands-flake
+
+# Or enter a development shell
+nix develop github:luochen1990/OpenHands-flake
+```
+
+For NixOS users, a module is available to run OpenHands as a service. See [NIX.md](NIX.md) for detailed instructions.
+
+### Other Options
+
 You can also [connect OpenHands to your local filesystem](https://docs.all-hands.dev/modules/usage/runtimes/docker#connecting-to-your-filesystem),
 run OpenHands in a scriptable [headless mode](https://docs.all-hands.dev/modules/usage/how-to/headless-mode),
 interact with it via a [friendly CLI](https://docs.all-hands.dev/modules/usage/how-to/cli-mode),

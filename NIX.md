@@ -104,7 +104,16 @@ For sensitive information like API keys, create an environment file:
 LLM_API_KEY=your-api-key-here
 ```
 
-**重要提示**：确保环境文件存在并且可以被 OpenHands 服务访问。如果您指定了 `environmentFile` 选项但文件不存在，服务将无法启动。
+**重要提示**：当使用默认的 `user = "openhands"` 设置时，模块会自动创建一个名为 `openhands-setup` 的服务，该服务会：
+
+1. 确保数据目录和工作区目录存在
+2. 设置正确的所有权和权限
+3. 如果指定了 `environmentFile` 但文件不存在，则创建一个空的环境文件
+
+如果您使用自定义用户而不是默认的 "openhands" 用户，您需要确保：
+
+1. 数据目录和工作区目录存在并且具有正确的权限
+2. 如果指定了环境文件，该文件必须存在并且可以被服务访问
 
 如果您不需要使用环境文件，请不要设置 `environmentFile` 选项，或将其设置为 `null`：
 

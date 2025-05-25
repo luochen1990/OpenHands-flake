@@ -137,10 +137,58 @@
             
             users.groups.${cfg.group} = lib.mkIf (cfg.group == "openhands") {};
             
+            # Create a separate setup service to ensure directories exist
+            systemd.services.openhands-setup = lib.mkIf (cfg.user == "openhands") {
+              description = "Setup for OpenHands service";
+              wantedBy = [ "multi-user.target" ];
+              before = [ "openhands.service" ];
+              
+              serviceConfig = {
+                Type = "oneshot";
+                RemainAfterExit = true;
+                User = "root";
+                Group = "root";
+              };
+              
+              script = ''
+                # Create data directory if it doesn't exist
+                mkdir -p ${cfg.dataDir}
+                chown ${cfg.user}:${cfg.group} ${cfg.dataDir}
+                
+                # Create workspace directory if it doesn't exist
+                mkdir -p ${cfg.workspaceDir}
+                chown ${cfg.user}:${cfg.group} ${cfg.workspaceDir}
+                
+                # Create environment file if specified but doesn't exist
+                ${lib.optionalString (cfg.environmentFile != null) ''
+                  ENV_FILE="${cfg.environmentFile}"
+                  ENV_DIR=$(dirname "$ENV_FILE")
+                  
+                  # Create directory for environment file if it doesn't exist
+                  if [ ! -d "$ENV_DIR" ]; then
+                    mkdir -p "$ENV_DIR"
+                  fi
+                  
+                  # Create empty environment file if it doesn't exist
+                  if [ ! -f "$ENV_FILE" ]; then
+                    touch "$ENV_FILE"
+                    echo "# OpenHands environment file" > "$ENV_FILE"
+                    ${lib.optionalString (cfg.llmApiKey != "") ''
+                      echo "LLM_API_KEY=${cfg.llmApiKey}" >> "$ENV_FILE"
+                    ''}
+                    chown ${cfg.user}:${cfg.group} "$ENV_FILE"
+                    chmod 600 "$ENV_FILE"
+                  fi
+                ''}
+              '';
+            };
+            
+            # The main OpenHands service
             systemd.services.openhands = {
               description = "OpenHands AI software engineer";
               wantedBy = [ "multi-user.target" ];
-              after = [ "network.target" ];
+              after = [ "network.target" ] ++ lib.optional (cfg.user == "openhands") "openhands-setup.service";
+              requires = lib.optional (cfg.user == "openhands") "openhands-setup.service";
               
               serviceConfig = {
                 User = cfg.user;
@@ -168,9 +216,6 @@
               };
               
               preStart = ''
-                # Create workspace directory if it doesn't exist
-                mkdir -p ${cfg.workspaceDir}
-                
                 # Create basic config.toml if it doesn't exist
                 if [ ! -f ${cfg.dataDir}/config.toml ]; then
                   cat > ${cfg.dataDir}/config.toml << EOF

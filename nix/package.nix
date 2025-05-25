@@ -99,14 +99,14 @@ pkgs.stdenv.mkDerivation {
     # Create a wrapper script for CLI mode
     makeWrapper ${pythonPackage}/bin/python $out/bin/openhands \
       --add-flags "-m openhands.cli.main" \
-      --set PYTHONPATH "$out/lib:$PYTHONPATH" \
+      --set PYTHONPATH "$out:$PYTHONPATH" \
       --set OPENHANDS_FRONTEND_PATH "$out/share/openhands/frontend" \
       --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
     
     # Create a server wrapper script for web UI mode
     makeWrapper ${pythonPackage}/bin/python $out/bin/openhands-server \
       --add-flags "-m openhands.server.main" \
-      --set PYTHONPATH "$out/lib:$PYTHONPATH" \
+      --set PYTHONPATH "$out:$PYTHONPATH" \
       --set OPENHANDS_FRONTEND_PATH "$out/share/openhands/frontend" \
       --prefix PATH : "${pkgs.lib.makeBinPath runtimeDeps}"
   '';

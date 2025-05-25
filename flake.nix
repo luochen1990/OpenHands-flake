@@ -13,41 +13,34 @@
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       forAllSystems = f: nixpkgs.lib.genAttrs supportedSystems (system: f system);
-    in {
-      packages = forAllSystems (system:
+      
+      # Function to get pkgs for a specific system
+      getPkgs = system: import nixpkgs {
+        inherit system;
+        overlays = [ poetry2nix.overlays.default ];
+      };
+      
+      # Function to get poetry overrides for a specific system
+      getPoetryOverrides = pkgs: pkgs.poetry2nix.overrides.withDefaults (final: prev: {
+        # Add overrides for problematic packages here if needed
+        browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+        });
+        
+        e2b = prev.e2b.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
+        });
+        
+        # Add more overrides as needed
+      });
+      
+      # Function to build the OpenHands package for a specific system
+      buildOpenhandsPackage = system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ poetry2nix.overlays.default ];
-          };
-
-          # Python version used by the project
+          pkgs = getPkgs system;
           python = pkgs.python312;
-
-          # Override packages that might have issues with poetry2nix
-          poetryOverrides = pkgs.poetry2nix.overrides.withDefaults (final: prev: {
-            # Add overrides for problematic packages here if needed
-            browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-            });
-            
-            e2b = prev.e2b.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-            });
-            
-            # Add more overrides as needed
-          });
-
-          # Create a Python environment with all dependencies
-          poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
-            projectDir = self;
-            python = python;
-            overrides = poetryOverrides;
-            editablePackageSources = {
-              openhands-ai = self;
-            };
-          };
-
+          poetryOverrides = getPoetryOverrides pkgs;
+          
           # Build the frontend
           frontendBuild = pkgs.buildNpmPackage {
             pname = "openhands-frontend";
@@ -70,7 +63,7 @@
               cp -r build/* $out/
             '';
           };
-
+          
           # The main package
           openhandsPackage = pkgs.poetry2nix.mkPoetryApplication {
             projectDir = self;
@@ -111,32 +104,14 @@
               chmod +x $out/bin/openhands-server
             '';
           };
-        in {
-          default = openhandsPackage;
-          openhands = openhandsPackage;
-        };
+        in openhandsPackage;
       
-      devShells = forAllSystems (system:
+      # Function to build the development shell for a specific system
+      buildDevShell = system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ poetry2nix.overlays.default ];
-          };
-          
-          # Python version used by the project
+          pkgs = getPkgs system;
           python = pkgs.python312;
-          
-          # Override packages that might have issues with poetry2nix
-          poetryOverrides = pkgs.poetry2nix.overrides.withDefaults (final: prev: {
-            # Add overrides for problematic packages here if needed
-            browsergym-core = prev.browsergym-core.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-            });
-            
-            e2b = prev.e2b.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or [ ]) ++ [ final.setuptools ];
-            });
-          });
+          poetryOverrides = getPoetryOverrides pkgs;
           
           # Create a Python environment with all dependencies
           poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
@@ -147,42 +122,48 @@
               openhands-ai = self;
             };
           };
-        in {
-          default = pkgs.mkShell {
-            buildInputs = with pkgs; [
-              # Python environment with all dependencies
-              poetryEnv
-              poetry
-              
-              # Node.js and npm for frontend development
-              nodejs_20
-              nodePackages.npm
-              
-              # Development tools
-              pre-commit
-              
-              # System dependencies
-              tmux
-              
-              # For browser functionality
-              chromium
-              
-              # For terminal functionality
-              bash
-              coreutils
-              findutils
-              gnugrep
-              gnused
-            ];
+        in pkgs.mkShell {
+          buildInputs = with pkgs; [
+            # Python environment with all dependencies
+            poetryEnv
+            poetry
             
-            shellHook = ''
-              echo "OpenHands development environment"
-              echo "Run 'make build' to build the project"
-              echo "Run 'make run' to start the application"
-            '';
-          };
-        }
-      );
+            # Node.js and npm for frontend development
+            nodejs_20
+            nodePackages.npm
+            
+            # Development tools
+            pre-commit
+            
+            # System dependencies
+            tmux
+            
+            # For browser functionality
+            chromium
+            
+            # For terminal functionality
+            bash
+            coreutils
+            findutils
+            gnugrep
+            gnused
+          ];
+          
+          shellHook = ''
+            echo "OpenHands development environment"
+            echo "Run 'make build' to build the project"
+            echo "Run 'make run' to start the application"
+          '';
+        };
+    in {
+      packages = forAllSystems (system: {
+        default = buildOpenhandsPackage system;
+        openhands = buildOpenhandsPackage system;
+      });
+      
+      devShells = forAllSystems (system: {
+        default = buildDevShell system;
+      });
       # NixOS module for the OpenHands service
       nixosModules.default = { config, lib, pkgs, ... }:
         let

@@ -7,11 +7,14 @@ pkgs.buildNpmPackage {
   # 使用完整仓库作为源，但只构建前端部分
   inherit src;
   
-  # 指定前端目录
-  sourceRoot = "frontend";
+  # 在 postPatch 阶段复制前端文件到根目录
+  postPatch = ''
+    cp -r frontend/* ./
+    cp frontend/.* ./ 2>/dev/null || true
+  '';
   
   # 使用 package-lock.json 确保依赖的确定性
-  npmDepsHash = "sha256-uaxHdLMsYWvXbZvXdm+vXrYa+vfX5DYoO2izIuOLjzM=";
+  npmDepsHash = "sha256-uymMFsCID2rQXtmh5SQxmiiFlZjN1HxPyC2UXnDzcSw=";
   
   # 构建命令
   buildPhase = ''

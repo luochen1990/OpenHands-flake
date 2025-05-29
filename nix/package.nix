@@ -11,6 +11,11 @@ let
   runtimeDeps = with pkgs; [
     tmux
     chromium
+    stdenv.cc.cc.lib # libstdc++
+    glibc
+    zlib
+    ncurses
+    netcat
   ];
   
   # Create a simple Python package that just wraps the OpenHands code
@@ -38,6 +43,9 @@ let
     litellm
     openai
     anthropic
+    google-api-python-client
+    google-auth-httplib2
+    google-auth-oauthlib
     
     # Browser dependencies
     html2text
@@ -54,6 +62,8 @@ let
     prompt-toolkit
     rich
     typer
+    docker
+    json-repair
     
     # Additional packages that might be needed
     requests
@@ -61,6 +71,8 @@ let
     httpx
     typing-extensions
     pyyaml
+    tornado
+    anyio
     
     # Missing dependencies from error message (only include those available in nixpkgs)
     minio
@@ -69,6 +81,25 @@ let
     python-socketio
     redis
     zope-interface
+    
+    # Additional dependencies from pyproject.toml that are available in nixpkgs
+    # Note: Some packages might not be available in nixpkgs
+    joblib
+    ipywidgets
+    qtconsole
+    
+    # These will be installed via pip in the installPhase
+    # dirhash
+    # python-frontmatter
+    # python-docx
+    # pypdf2
+    # python-pptx
+    # pylatexenc
+    # pylcs
+    # whatthepatch
+    # sse-starlette
+    # stripe
+    # python-json-logger
   ]);
 in
 pkgs.stdenv.mkDerivation {
@@ -101,7 +132,7 @@ import sys
 import os
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -125,12 +156,18 @@ async def root():
 async def health():
     return {"status": "ok"}
 
+@app.get("/api/version")
+async def version():
+    return JSONResponse({"message": "OpenHands version unknown is running!"})
+
 def main():
-    print("OpenHands server starting...")
+    host = os.environ.get('HOST', '0.0.0.0')
+    port = int(os.environ.get('PORT', '12000'))
+    print(f"OpenHands server starting on {host}:{port}...")
     uvicorn.run(
         app,
-        host='0.0.0.0',
-        port=int(os.environ.get('port') or '3000'),
+        host=host,
+        port=port,
         log_level='debug' if os.environ.get('DEBUG') else 'info',
     )
 
@@ -154,6 +191,19 @@ EOF
     ${pythonPackage}/bin/pip install fastmcp==2.3.3 --no-deps
     ${pythonPackage}/bin/pip install exceptiongroup==1.3.0 --no-deps
     ${pythonPackage}/bin/pip install openapi-pydantic==0.5.1 --no-deps
+    
+    # Install additional dependencies that aren't available in nixpkgs
+    ${pythonPackage}/bin/pip install dirhash --no-deps
+    ${pythonPackage}/bin/pip install python-frontmatter==1.1.0 --no-deps
+    ${pythonPackage}/bin/pip install python-docx --no-deps
+    ${pythonPackage}/bin/pip install PyPDF2 --no-deps
+    ${pythonPackage}/bin/pip install python-pptx --no-deps
+    ${pythonPackage}/bin/pip install pylatexenc --no-deps
+    ${pythonPackage}/bin/pip install pylcs==0.1.1 --no-deps
+    ${pythonPackage}/bin/pip install whatthepatch==1.0.6 --no-deps
+    ${pythonPackage}/bin/pip install sse-starlette==2.1.3 --no-deps
+    ${pythonPackage}/bin/pip install stripe --no-deps
+    ${pythonPackage}/bin/pip install python-json-logger==3.2.1 --no-deps
     
     # Create a wrapper script for CLI mode
     makeWrapper ${pythonPackage}/bin/python $out/bin/openhands \
@@ -180,7 +230,9 @@ EOF
       --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}"
     
     wrapProgram $out/bin/openhands-server \
-      --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}"
+      --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath runtimeDeps}" \
+      --set PORT "12000" \
+      --set HOST "0.0.0.0"
   '';
   
   meta = with lib; {
